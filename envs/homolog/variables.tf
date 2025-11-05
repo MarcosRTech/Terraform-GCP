@@ -49,30 +49,25 @@ variable "website_error_page" {
 }
 
 variable "enable_public_access" {
-  description = "When true, grants public read access to the bucket."
+  description = "When true, grants public read access to the bucket (not recommended when using the CDN)."
+  type        = bool
+  default     = false
+}
+
+variable "enable_bucket_versioning" {
+  description = "Enable object versioning on the static site bucket."
   type        = bool
   default     = true
 }
 
-variable "dns_project_id" {
-  description = "Optional project ID that hosts the Cloud DNS managed zone."
+variable "bucket_log_bucket" {
+  description = "Optional bucket to receive access logs from the static bucket."
   type        = string
   default     = null
 }
 
-variable "dns_managed_zone" {
-  description = "Cloud DNS managed zone used for kardume.theklubi.com."
-  type        = string
-}
-
-variable "dns_record_name" {
-  description = "Optional override for the DNS record name. Defaults to the bucket name."
+variable "bucket_log_prefix" {
+  description = "Optional prefix for access logs."
   type        = string
   default     = null
-}
-
-variable "dns_ttl" {
-  description = "TTL for the DNS record."
-  type        = number
-  default     = 300
 }

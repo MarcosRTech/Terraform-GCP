@@ -22,3 +22,13 @@ output "public_access_enabled" {
   description = "Whether the bucket was configured for public read access."
   value       = var.enable_public_access
 }
+
+output "versioning_enabled" {
+  description = "Indicates if object versioning is turned on."
+  value       = google_storage_bucket.this.versioning[0].enabled
+}
+
+output "logging_configured" {
+  description = "Indicates if access logging is configured."
+  value       = google_storage_bucket.this.logging != null
+}

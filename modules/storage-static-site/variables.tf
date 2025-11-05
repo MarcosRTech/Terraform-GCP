@@ -4,7 +4,7 @@ variable "project_id" {
 }
 
 variable "bucket_name" {
-  description = "Name of the bucket. For static websites with custom domains, this should match the full domain."
+  description = "Globally-unique name for the bucket."
   type        = string
 }
 
@@ -46,5 +46,29 @@ variable "website_error_page" {
 variable "enable_public_access" {
   description = "Controls whether objects in the bucket are publicly readable."
   type        = bool
+  default     = false
+}
+
+variable "object_viewers" {
+  description = "IAM members (serviceAccount:..., group:..., etc.) that must have objectViewer on the bucket."
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_versioning" {
+  description = "Enable bucket object versioning for safer rollbacks."
+  type        = bool
   default     = true
+}
+
+variable "log_bucket" {
+  description = "Optional bucket to receive access logs."
+  type        = string
+  default     = null
+}
+
+variable "log_object_prefix" {
+  description = "Optional log object prefix when logging is enabled."
+  type        = string
+  default     = null
 }

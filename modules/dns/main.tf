@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    google = {
+      source = "hashicorp/google"
+    }
+  }
+}
+
 locals {
   normalized_record_name = format("%s.", trim(var.record_name, "."))
 }

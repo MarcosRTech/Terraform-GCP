@@ -12,8 +12,3 @@ output "static_site_bucket_url" {
   description = "gs:// URL for the static site bucket."
   value       = module.static_site.bucket_url
 }
-
-output "dns_record_fqdn" {
-  description = "FQDN created for kardume.theklubi.com in Cloud DNS."
-  value       = module.dns_record.record_fqdn
-}
