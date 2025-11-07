@@ -111,3 +111,32 @@ variable "cdn_existing_ssl_certificate_name" {
   type        = string
   default     = null
 }
+
+variable "compraplanejada_site" {
+  description = "Configuracoes opcionais para publicar o site compraplanejada.theklubi.com."
+  type = object({
+    bucket_name                       = string
+    bucket_location                   = optional(string)
+    storage_class                     = optional(string)
+    bucket_labels                     = optional(map(string))
+    force_destroy                     = optional(bool)
+    website_main_page                 = optional(string)
+    website_error_page                = optional(string)
+    enable_public_access              = optional(bool)
+    enable_bucket_versioning          = optional(bool)
+    bucket_log_bucket                 = optional(string)
+    bucket_log_prefix                 = optional(string)
+    cdn_hostnames                     = list(string)
+    cdn_name                          = optional(string)
+    cdn_enable_http_redirect          = optional(bool)
+    cdn_enable_http_backend           = optional(bool)
+    cdn_use_managed_ssl_certificate   = optional(bool)
+    cdn_existing_ssl_certificate_name = optional(string)
+  })
+  default = null
+
+  validation {
+    condition     = var.compraplanejada_site == null || length(var.compraplanejada_site.cdn_hostnames) > 0
+    error_message = "Quando compraplanejada_site for definido, informe ao menos um hostname em cdn_hostnames."
+  }
+}
