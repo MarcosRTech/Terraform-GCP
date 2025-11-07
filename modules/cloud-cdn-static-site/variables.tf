@@ -24,6 +24,24 @@ variable "enable_http_redirect" {
   default     = true
 }
 
+variable "enable_http_backend" {
+  description = "Provision HTTP listener que atende o conteudo diretamente (sem redirecionar)."
+  type        = bool
+  default     = false
+}
+
+variable "use_managed_ssl_certificate" {
+  description = "Quando verdadeiro, cria um certificado gerenciado pelo Google para os hostnames informados."
+  type        = bool
+  default     = true
+}
+
+variable "existing_ssl_certificate_name" {
+  description = "Nome do certificado SSL (global) ja existente no GCP para ser reutilizado quando use_managed_ssl_certificate=false."
+  type        = string
+  default     = null
+}
+
 variable "enable_logging" {
   description = "Enable Cloud CDN request logging."
   type        = bool

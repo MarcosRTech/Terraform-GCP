@@ -71,3 +71,43 @@ variable "bucket_log_prefix" {
   type        = string
   default     = null
 }
+
+variable "cdn_hostnames" {
+  description = "Lista de dominios (FQDNs) que o load balancer ira atender e que terao certificado gerenciado."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.cdn_hostnames) > 0
+    error_message = "Defina pelo menos um hostname completo para provisionar o load balancer (ex: \"app-hml.seudominio.com\")."
+  }
+}
+
+variable "cdn_name" {
+  description = "Nome base utilizado para nomear os recursos do load balancer (padrao: bucket_name)."
+  type        = string
+  default     = null
+}
+
+variable "cdn_enable_http_redirect" {
+  description = "Quando verdadeiro, cria listener HTTP que redireciona todo trafego para HTTPS."
+  type        = bool
+  default     = true
+}
+
+variable "cdn_enable_http_backend" {
+  description = "Quando verdadeiro, expoe o conteudo via HTTP usando o mesmo backend (sem redirecionamento)."
+  type        = bool
+  default     = false
+}
+
+variable "cdn_use_managed_ssl_certificate" {
+  description = "Quando verdadeiro, deixa o Google gerenciar o certificado SSL automaticamente."
+  type        = bool
+  default     = true
+}
+
+variable "cdn_existing_ssl_certificate_name" {
+  description = "Nome do certificado SSL global ja importado no GCP (use quando nao estiver usando certificado gerenciado)."
+  type        = string
+  default     = null
+}

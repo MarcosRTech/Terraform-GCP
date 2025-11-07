@@ -1,6 +1,12 @@
 locals {
   sanitized_name = substr(replace(lower(var.name), "/[^a-z0-9-]/", "-"), 0, 40)
   host_rules     = [for h in var.hostnames : trim(h, ".")]
+  http_listener_mode = (
+    var.enable_http_redirect && var.enable_http_backend ? "invalid" :
+    var.enable_http_redirect ? "redirect" :
+    var.enable_http_backend ? "backend" :
+    "disabled"
+  )
 }
 
 resource "google_compute_backend_bucket" "static_site" {
@@ -9,6 +15,13 @@ resource "google_compute_backend_bucket" "static_site" {
   bucket_name = var.bucket_name
   enable_cdn  = true
   description = "Backend bucket for Cloud CDN static site ${var.bucket_name}"
+
+  lifecycle {
+    precondition {
+      condition     = local.http_listener_mode != "invalid"
+      error_message = "enable_http_redirect e enable_http_backend nao podem ser verdadeiros ao mesmo tempo neste modulo."
+    }
+  }
 
   cdn_policy {
     cache_mode        = "CACHE_ALL_STATIC"
@@ -53,6 +66,7 @@ resource "google_compute_url_map" "https" {
 }
 
 resource "google_compute_managed_ssl_certificate" "static_site" {
+  count   = var.use_managed_ssl_certificate ? 1 : 0
   project = var.project_id
   name    = "${local.sanitized_name}-cert"
 
@@ -61,14 +75,31 @@ resource "google_compute_managed_ssl_certificate" "static_site" {
   }
 }
 
+data "google_compute_ssl_certificate" "existing" {
+  count   = (!var.use_managed_ssl_certificate && var.existing_ssl_certificate_name != null) ? 1 : 0
+  project = var.project_id
+  name    = var.existing_ssl_certificate_name
+}
+
 resource "google_compute_target_https_proxy" "static_site" {
   project = var.project_id
   name    = "${local.sanitized_name}-https-proxy"
 
   url_map = google_compute_url_map.https.id
-  ssl_certificates = [
-    google_compute_managed_ssl_certificate.static_site.id,
-  ]
+  ssl_certificates = var.use_managed_ssl_certificate ? [
+    google_compute_managed_ssl_certificate.static_site[0].self_link
+    ] : (
+    var.existing_ssl_certificate_name != null ? [
+      data.google_compute_ssl_certificate.existing[0].self_link
+    ] : []
+  )
+
+  lifecycle {
+    precondition {
+      condition     = var.use_managed_ssl_certificate || var.existing_ssl_certificate_name != null
+      error_message = "Quando nao estiver usando certificado gerenciado, informe existing_ssl_certificate_name com o nome do certificado importado."
+    }
+  }
 }
 
 resource "google_compute_global_address" "static_site" {
@@ -89,9 +120,9 @@ resource "google_compute_global_forwarding_rule" "https" {
 }
 
 resource "google_compute_url_map" "http_redirect" {
-  count   = var.enable_http_redirect ? 1 : 0
-  project = var.project_id
-  name    = "${local.sanitized_name}-http-map"
+  for_each = local.http_listener_mode == "redirect" ? { redirect = true } : {}
+  project  = var.project_id
+  name     = "${local.sanitized_name}-http-map"
 
   default_url_redirect {
     https_redirect         = true
@@ -101,19 +132,37 @@ resource "google_compute_url_map" "http_redirect" {
 }
 
 resource "google_compute_target_http_proxy" "redirect" {
-  count   = var.enable_http_redirect ? 1 : 0
-  project = var.project_id
-  name    = "${local.sanitized_name}-http-proxy"
-  url_map = google_compute_url_map.http_redirect[count.index].id
+  for_each = local.http_listener_mode == "redirect" ? { redirect = true } : {}
+  project  = var.project_id
+  name     = "${local.sanitized_name}-http-proxy"
+  url_map  = google_compute_url_map.http_redirect[each.key].id
 }
 
-resource "google_compute_global_forwarding_rule" "http" {
-  count                 = var.enable_http_redirect ? 1 : 0
+resource "google_compute_global_forwarding_rule" "http_redirect" {
+  for_each              = local.http_listener_mode == "redirect" ? { redirect = true } : {}
   project               = var.project_id
   name                  = "${local.sanitized_name}-http-fr"
   ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL"
   port_range            = "80"
-  target                = google_compute_target_http_proxy.redirect[count.index].id
+  target                = google_compute_target_http_proxy.redirect[each.key].id
+  ip_address            = google_compute_global_address.static_site.address
+}
+
+resource "google_compute_target_http_proxy" "backend" {
+  for_each = local.http_listener_mode == "backend" ? { backend = true } : {}
+  project  = var.project_id
+  name     = "${local.sanitized_name}-http-proxy"
+  url_map  = google_compute_url_map.https.id
+}
+
+resource "google_compute_global_forwarding_rule" "http_backend" {
+  for_each              = local.http_listener_mode == "backend" ? { backend = true } : {}
+  project               = var.project_id
+  name                  = "${local.sanitized_name}-http-fr"
+  ip_protocol           = "TCP"
+  load_balancing_scheme = "EXTERNAL"
+  port_range            = "80"
+  target                = google_compute_target_http_proxy.backend[each.key].id
   ip_address            = google_compute_global_address.static_site.address
 }

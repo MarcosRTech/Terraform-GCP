@@ -40,7 +40,7 @@ variable "website_main_page" {
 variable "website_error_page" {
   description = "Error page served by the static website."
   type        = string
-  default     = "404.html"
+  default     = "index.html"
 }
 
 variable "enable_public_access" {
