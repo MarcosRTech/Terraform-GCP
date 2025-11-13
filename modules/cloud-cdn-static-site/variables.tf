@@ -18,6 +18,12 @@ variable "hostnames" {
   type        = list(string)
 }
 
+variable "enable_https" {
+  description = "Provisiona listener HTTPS (requer certificado)."
+  type        = bool
+  default     = true
+}
+
 variable "enable_http_redirect" {
   description = "Provision HTTP listener that redirects traffic to HTTPS."
   type        = bool

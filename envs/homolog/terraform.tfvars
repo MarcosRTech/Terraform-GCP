@@ -1,64 +1,62 @@
-# Identificacao do projeto e provedor Google Cloud
-project_id = "klubi-homolog"
-region     = "us-central1"
+# Estrutura principal
+organization_id     = "419602604664"
+billing_account_id  = "01DA36-FF7E31-5EE738"
+region              = "us-central1"
+environment         = "homolog"
+folder_display_name = "homolog"
 
-# Configuracoes do bucket estatico
-bucket_name              = "kardume-homolog"
-bucket_location          = "US"
-storage_class            = "STANDARD"
-force_destroy            = false
-website_main_page        = "index.html"
-website_error_page       = "404.html"
-enable_public_access     = true
-enable_bucket_versioning = true
-bucket_log_bucket        = null
-bucket_log_prefix        = null
-bucket_labels = {
-  environment = "homolog"
-  squad       = "front-end"
-}
-
-# Configuracoes do load balancer / Cloud CDN
-cdn_hostnames = [
-  "kardume.theklubi.com"
-]
-
-# Opcional: ajuste caso queira customizar o nome base dos recursos
-cdn_name = "kardume-homolog"
-
-# Define se o listener HTTP redireciona todo o trafego para HTTPS
-cdn_enable_http_redirect = false
-
-# Expoe o conteudo tambem pela porta 80 sem redirecionar
-cdn_enable_http_backend = true
-
-# Certificado SSL: reutiliza o certificado importado "kardume-homolo"
-cdn_use_managed_ssl_certificate   = false
-cdn_existing_ssl_certificate_name = "kardume-homolo"
-
-# Configuracao opcional do site compraplanejada
-compraplanejada_site = {
-  bucket_name              = "compraplanejada-homolog"
-  bucket_location          = "US"
-  storage_class            = "STANDARD"
-  force_destroy            = false
-  website_main_page        = "index.html"
-  website_error_page       = "404.html"
-  enable_public_access     = true
-  enable_bucket_versioning = true
-  bucket_labels = {
-    environment = "homolog"
-    squad       = "front-end"
-    application = "compraplanejada"
+# Serviços controlados neste ambiente
+services = {
+  kardume = {
+    project_id           = "klubi-kardume-hml"
+    bucket_name          = "klubi-kardume-hml"
+    bucket_force_destroy = true
+    bucket_labels = {
+      squad       = "front-end"
+      application = "kardume"
+    }
+    cdn_hostnames    = ["kardume-hml.theklubi.com"]
+    cdn_name         = "klubi-kardume-hml"
+    cdn_enable_https = false
   }
 
-  cdn_hostnames = [
-    "compraplanejada.theklubi.com"
-  ]
-  cdn_name                        = "compraplanejada-homolog"
-  cdn_enable_http_redirect        = false
-  cdn_enable_http_backend         = true
-  cdn_use_managed_ssl_certificate = true
-  # Se importar um certificado manualmente, informe abaixo e ajuste o flag acima para false
-  # cdn_existing_ssl_certificate_name = "compraplanejada-homolo"
+  compraplanejada = {
+    project_id           = "klubi-compraplanejada-hml"
+    bucket_name          = "klubi-compraplanejada-hml"
+    bucket_force_destroy = true
+    bucket_labels = {
+      squad       = "front-end"
+      application = "compraplanejada"
+    }
+    cdn_hostnames    = ["compraplanejada-hml.theklubi.com"]
+    cdn_name         = "klubi-compraplanejada-hml"
+    cdn_enable_https = false
+  }
+
+  app = {
+    project_id           = "klubi-application-hml"
+    bucket_name          = "klubi-application-hml"
+    bucket_force_destroy = true
+    project_name         = "Application"
+    bucket_labels = {
+      squad       = "front-end"
+      application = "app"
+    }
+    cdn_hostnames    = ["app-hml.theklubi.com"]
+    cdn_name         = "klubi-application-hml"
+    cdn_enable_https = false
+  }
+
+  simule = {
+    project_id           = "klubi-simule-hml"
+    bucket_name          = "klubi-simule-hml"
+    bucket_force_destroy = true
+    bucket_labels = {
+      squad       = "front-end"
+      application = "simule"
+    }
+    cdn_hostnames    = ["simule-hml.theklubi.com"]
+    cdn_name         = "klubi-simule-hml"
+    cdn_enable_https = false
+  }
 }

@@ -1,6 +1,7 @@
 locals {
   sanitized_name = substr(replace(lower(var.name), "/[^a-z0-9-]/", "-"), 0, 40)
   host_rules     = [for h in var.hostnames : trim(h, ".")]
+  https_enabled  = var.enable_https
   http_listener_mode = (
     var.enable_http_redirect && var.enable_http_backend ? "invalid" :
     var.enable_http_redirect ? "redirect" :
@@ -20,6 +21,11 @@ resource "google_compute_backend_bucket" "static_site" {
     precondition {
       condition     = local.http_listener_mode != "invalid"
       error_message = "enable_http_redirect e enable_http_backend nao podem ser verdadeiros ao mesmo tempo neste modulo."
+    }
+
+    precondition {
+      condition     = local.https_enabled || local.http_listener_mode != "disabled"
+      error_message = "Ative HTTPS (enable_https) ou algum listener HTTP (redirect/backend) para expor o bucket."
     }
   }
 
@@ -66,7 +72,7 @@ resource "google_compute_url_map" "https" {
 }
 
 resource "google_compute_managed_ssl_certificate" "static_site" {
-  count   = var.use_managed_ssl_certificate ? 1 : 0
+  count   = local.https_enabled && var.use_managed_ssl_certificate ? 1 : 0
   project = var.project_id
   name    = "${local.sanitized_name}-cert"
 
@@ -76,12 +82,17 @@ resource "google_compute_managed_ssl_certificate" "static_site" {
 }
 
 data "google_compute_ssl_certificate" "existing" {
-  count   = (!var.use_managed_ssl_certificate && var.existing_ssl_certificate_name != null) ? 1 : 0
+  count = (
+    local.https_enabled &&
+    !var.use_managed_ssl_certificate &&
+    var.existing_ssl_certificate_name != null
+  ) ? 1 : 0
   project = var.project_id
   name    = var.existing_ssl_certificate_name
 }
 
 resource "google_compute_target_https_proxy" "static_site" {
+  count   = local.https_enabled ? 1 : 0
   project = var.project_id
   name    = "${local.sanitized_name}-https-proxy"
 
@@ -96,7 +107,7 @@ resource "google_compute_target_https_proxy" "static_site" {
 
   lifecycle {
     precondition {
-      condition     = var.use_managed_ssl_certificate || var.existing_ssl_certificate_name != null
+      condition     = !local.https_enabled || var.use_managed_ssl_certificate || var.existing_ssl_certificate_name != null
       error_message = "Quando nao estiver usando certificado gerenciado, informe existing_ssl_certificate_name com o nome do certificado importado."
     }
   }
@@ -110,12 +121,13 @@ resource "google_compute_global_address" "static_site" {
 }
 
 resource "google_compute_global_forwarding_rule" "https" {
+  count                 = local.https_enabled ? 1 : 0
   project               = var.project_id
   name                  = "${local.sanitized_name}-https-fr"
   ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL"
   port_range            = "443"
-  target                = google_compute_target_https_proxy.static_site.id
+  target                = google_compute_target_https_proxy.static_site[0].id
   ip_address            = google_compute_global_address.static_site.address
 }
 
@@ -128,6 +140,13 @@ resource "google_compute_url_map" "http_redirect" {
     https_redirect         = true
     strip_query            = false
     redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+  }
+
+  lifecycle {
+    precondition {
+      condition     = var.enable_https
+      error_message = "enable_http_redirect exige enable_https=true para onde redirecionar o trafego."
+    }
   }
 }
 
@@ -165,4 +184,14 @@ resource "google_compute_global_forwarding_rule" "http_backend" {
   port_range            = "80"
   target                = google_compute_target_http_proxy.backend[each.key].id
   ip_address            = google_compute_global_address.static_site.address
+}
+
+moved {
+  from = google_compute_target_https_proxy.static_site
+  to   = google_compute_target_https_proxy.static_site[0]
+}
+
+moved {
+  from = google_compute_global_forwarding_rule.https
+  to   = google_compute_global_forwarding_rule.https[0]
 }
